@@ -3,18 +3,18 @@
  *    BST
  * Summary:
  *    Our custom implementation of a BST for set and for map
- *      __      __     _______        __
- *     /  |    /  |   |  _____|   _  / /
- *     `| |    `| |   | |____    (_)/ /
- *      | |     | |   '_.____''.   / / _
- *     _| |_   _| |_  | \____) |  / / (_)
- *    |_____| |_____|  \______.' /_/
+ *     __   __   _____   _   __
+ *    /_ | /_ | | ____| (_) / /
+ *     | |  | | | |__      / / 
+ *     | |  | | |___ \    / /  
+ *     | |  | |  ___) |  / / _ 
+ *     |_|  |_| |____/  /_/ (_)
  *
  *    This will contain the class definition of:
  *        BST                 : A class that represents a binary search tree
  *        BST::iterator       : An iterator through BST
- * Author
- *    <your names here>
+ * Author:
+ *    James Helfrich, PhD. (c) 2022 by Kendall Hunt
  ************************************************************************/
 
 #pragma once
@@ -25,1060 +25,1261 @@
 #define debug(x)
 #endif // !DEBUG
 
-#include <cassert>
-#include <utility>
-#include <memory>     // for std::allocator
-#include <functional> // for std::less
-#include <utility>    // for std::pair
+#include <cassert>          // because I am paranoid
+#include <memory>           // for std::allocator
+#include <functional>       // for std::less
+#include <utility>          // for std::pair
+#include <initializer_list> // for the initializer list, of course!
+
+class TestBST; // forward declaration for unit tests
+class TestSet;
+class TestMap;
 
 namespace custom
 {
+   template <typename TT>
+   class set;
+   template <typename KK, typename VV>
+   class map;
 
-/*****************************************************************
- * BINARY SEARCH TREE
- * Create a Binary Search Tree
- *****************************************************************/
-template <typename T>
-class BST
-{
-public:
-   //
-   // Construct
-   //
-
-   BST();
-   BST(const BST &  rhs);
-   BST(      BST && rhs);
-   BST(const std::initializer_list<T>& il);
-   ~BST();
-
-   //
-   // Assign
-   //
-
-   BST & operator = (const BST &  rhs);
-   BST & operator = (      BST && rhs);
-   BST & operator = (const std::initializer_list<T>& il);
-   void swap(BST & rhs);
-
-   //
-   // Iterator
-   //
-
-   class iterator;
-   iterator   begin() const noexcept;
-   iterator   end()   const noexcept { return iterator(nullptr); }
-
-   //
-   // Access
-   //
-
-   iterator find(const T& t);
-
-   //
-   // Insert
-   //
-
-   std::pair<iterator, bool> insert(const T&  t, bool keepUnique = false);
-   std::pair<iterator, bool> insert(      T&& t, bool keepUnique = false);
-
-   //
-   // Remove
-   //
-
-   iterator erase(iterator& it);
-   void   clear() noexcept;
-
-   //
-   // Status
-   //
-
-   bool   empty() const noexcept { return numElements == 0; }
-   size_t size()  const noexcept { return numElements;   }
-   
-
-#ifdef DEBUG // make this visible to the unit tests
-public:
-#else
-private:
-#endif
-
-   class BNode;
-   BNode * root;              // root node of the binary search tree
-   size_t numElements;        // number of elements currently in the tree
-};
-
-
-/*****************************************************************
- * BINARY NODE
- * A single node in a binary tree. Note that the node does not know
- * anything about the properties of the tree so no validation can be done.
- *****************************************************************/
-template <typename T>
-class BST <T> :: BNode
-{
-public:
-   //
-   // Construct
-   //
-   BNode() : pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true)
+   /*****************************************************************
+    * BINARY SEARCH TREE
+    * Create a Binary Search Tree
+    *****************************************************************/
+   template <typename T>
+   class BST
    {
-   }
-   BNode(const T &  t) : data(t), pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true)
-   {
-   }
-   BNode(T && t)  : data(std::move(t)), pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true)
-   {
-   }
+      friend class ::TestBST; // give unit tests access to the privates
+      friend class ::TestSet;
+      friend class ::TestMap;
 
-   //
-   // Insert
-   //
-   void addLeft (BNode * pNode);
-   void addRight(BNode * pNode);
-   void addLeft (const T &  t);
-   void addRight(const T &  t);
-   void addLeft(       T && t);
-   void addRight(      T && t);
+      template <class TT>
+      friend class custom::set;
 
-   //
-   // Status
-   //
-   bool isRightChild(BNode * pNode) const { return pRight == pNode; }
-   bool isLeftChild( BNode * pNode) const { return pLeft == pNode; }
+      template <class KK, class VV>
+      friend class custom::map;
+   public:
+      //
+      // Construct
+      //
 
-   // balance the tree
-   void balance();
+      BST();
+      BST(const BST& rhs);
+      BST(BST&& rhs);
+      BST(const std::initializer_list<T>& il);
+      ~BST();
 
-#ifdef DEBUG
-   //
-   // Verify
-   //
-   std::pair <T,T> verifyBTree() const;
-   int findDepth() const;
-   bool verifyRedBlack(int depth) const;
-   int computeSize() const;
-#endif // DEBUG
+      //
+      // Assign
+      //
 
-   //
-   // Data
-   //
-   T data;                  // Actual data stored in the BNode
-   BNode* pLeft;          // Left child - smaller
-   BNode* pRight;         // Right child - larger
-   BNode* pParent;        // Parent
-   bool isRed;              // Red-black balancing stuff
-};
+      BST& operator = (const BST& rhs);
+      BST& operator = (BST&& rhs);
+      BST& operator = (const std::initializer_list<T>& il);
+      void swap(BST& rhs);
 
-/**********************************************************
- * BINARY SEARCH TREE ITERATOR
- * Forward and reverse iterator through a BST
- *********************************************************/
-template <typename T>
-class BST <T> :: iterator
-{
-public:
-   // constructors and assignment
-   iterator(BNode * p = nullptr)
-   {
-       pNode = p;
-   }
-   iterator(const iterator & rhs)
-   {
-       pNode = rhs.pNode;
-   }
-   iterator & operator = (const iterator & rhs)
-   {
-       pNode = rhs.pNode;
-      return *this;
-   }
+      //
+      // Iterator
+      //
 
-   // compare
-   bool operator == (const iterator & rhs) const
-   {
-      return rhs.pNode == pNode;
-   }
-   bool operator != (const iterator & rhs) const
-   {
-      return rhs.pNode != pNode;
-   }
+      class iterator;
+      iterator   begin() const noexcept;
+      iterator   end()   const noexcept { return iterator(nullptr); }
 
-   // de-reference. Cannot change because it will invalidate the BST
-   const T & operator * () const
-   {
-      return pNode->data;
-   }
+      //
+      // Access
+      //
 
-   // increment and decrement
-   iterator & operator ++ ();
-   iterator   operator ++ (int postfix)
-   {
-       iterator it = *this;
-       ++(*this);
-      return it;
-   }
-   iterator & operator -- ();
-   iterator   operator -- (int postfix)
-   {
-       iterator it = *this;
-       --(*this);
-      return it;
-   }
+      iterator find(const T& t);
 
-   // must give friend status to remove so it can call getNode() from it
-   friend BST <T> :: iterator BST <T> :: erase(iterator & it);
+      // 
+      // Insert
+      //
 
-#ifdef DEBUG // make this visible to the unit tests
-public:
-#else
-private:
-#endif
-   
-    // the node
-    BNode * pNode;
-};
+      std::pair<iterator, bool> insert(const T& t, bool keepUnique = false);
+      std::pair<iterator, bool> insert(T&& t, bool keepUnique = false);
 
+      //
+      // Remove
+      // 
 
-/*********************************************
- *********************************************
- *********************************************
- ******************** BST ********************
- *********************************************
- *********************************************
- *********************************************/
+      iterator erase(iterator& it);
+      void   clear() noexcept;
 
+      // 
+      // Status
+      //
 
- /*********************************************
-  * BST :: DEFAULT CONSTRUCTOR
-  ********************************************/
-template <typename T>
-BST <T> ::BST()
-{
-   numElements = 0;
-   root = nullptr;
-}
+      bool   empty() const noexcept { return size() == 0; }
+      size_t size()  const noexcept { return numElements; }
 
-/*********************************************
- * BST :: COPY CONSTRUCTOR
- * Copy one tree to another
- ********************************************/
-template <typename T>
-BST <T> :: BST ( const BST<T>& rhs)
-{
-   this->numElements = rhs.numElements;
-   this->root = nullptr;
-   
-   if (rhs.root == nullptr)
-         return;
+   private:
 
-   auto copyTree = [](auto& self, const BNode* pSrc, BNode* pParentNode) -> BNode*
-   {
-      if (pSrc == nullptr)
-         return nullptr;
-            
-      BNode* pNewNode = new BNode(pSrc->data);
-      pNewNode->isRed = pSrc->isRed;
-      pNewNode->pParent = pParentNode;
-      
-      pNewNode->pLeft = self(self, pSrc->pLeft, pNewNode);
-      pNewNode->pRight = self(self, pSrc->pRight, pNewNode);
-         
-      return pNewNode;
+      class BNode;
+
+      // utility functions which need to be done recursively
+      void deleteNode(BNode*& pDelete, bool toRight);
+      void deleteBinaryTree(BNode*& pDelete) noexcept;
+      void copyBinaryTree(const BNode* pSrc, BNode*& pDest);
+
+      BNode* root;         // root node of the binary search tree
+      size_t numElements;  // number of elements currently in the tree
    };
 
-   this->root = copyTree(copyTree, rhs.root, nullptr);
-   }
 
-/*********************************************
- * BST :: MOVE CONSTRUCTOR
- * Move one tree to another
- ********************************************/
-template <typename T>
-BST <T> :: BST(BST <T> && rhs)
-{
-   this->numElements = rhs.numElements;
-   this->root = rhs.root;
-   rhs.numElements = 0;
-   rhs.root = nullptr;
-}
-
-/*********************************************
- * BST :: DESTRUCTOR
- ********************************************/
-template <typename T>
-BST <T> :: ~BST()
-{
-   clear();
-}
-
-
-/*********************************************
- * BST :: ASSIGNMENT OPERATOR
- * Copy one tree to another
- ********************************************/
-template <typename T>
-BST <T> & BST <T> :: operator = (const BST <T> & rhs)
-{
-   if (this == &rhs)
-       return *this;
-
-   BST<T> temp(rhs);
-   
-   this->swap(temp);
-   
-   return *this;
-}
-
-/*********************************************
- * BST :: ASSIGNMENT OPERATOR with INITIALIZATION LIST
- * Copy nodes onto a BTree
- ********************************************/
-template <typename T>
-BST <T> & BST <T> :: operator = (const std::initializer_list<T>& il)
-{
-    // make sure it's empty
-    clear();
-    // loop through an add each item
-    for (const auto & item : il)
-        insert(item);
-   return *this;
-}
-
-/*********************************************
- * BST :: ASSIGN-MOVE OPERATOR
- * Move one tree to another
- ********************************************/
-template <typename T>
-BST <T> & BST <T> :: operator = (BST <T> && rhs)
-{
-   if (this == &rhs)
-       return *this;
-
-   clear();
-   
-   this->swap(rhs);
-   
-   return *this;
-}
-
-/*********************************************
- * BST :: SWAP
- * Swap two trees
- ********************************************/
-template <typename T>
-void BST <T> :: swap (BST <T> & rhs)
-{
-    // swap root nodes
-    std::swap(rhs.root, root);
-    
-    // swap number of elements
-    std::swap(rhs.numElements, numElements);
-}
-
-/*****************************************************
- * BST :: INSERT
- * Insert a node at a given location in the tree
- ****************************************************/
-template <typename T>
-std::pair<typename BST <T> :: iterator, bool> BST <T> :: insert(const T & t, bool keepUnique)
-{
-   std::pair<iterator, bool> pairReturn(end(), false);
-    
-    // if the tree is empty
-    if (root == nullptr)
-    {
-        root = new BNode(t);
-        root->isRed = false;                    // root is black
-        numElements = 1;                        // only 1 element now
-        pairReturn.first = iterator(root);
-        pairReturn.second = true;               // it was added
-        return pairReturn;
-    }
-    BNode* pNode = root;
-    bool stop = false;
-    
-    while (!stop)
-    {
-        // if the data is already in there and it's meant to be unique
-        if (keepUnique && t == pNode->data)
-        {
-            pairReturn.first = iterator(pNode);
-            pairReturn.second = false;          // it wasn't added because it's meant to be unique
-            return pairReturn;
-        }
-        
-        // t is smaller than pNode, add it to the left
-        if (t < pNode->data)
-        {
-            // is there a node alread on the left?
-            if (pNode->pLeft)
-                pNode = pNode->pLeft;           // go to the left
-            // no node to left, so add a new one
-            else
-            {
-               BNode* pNew = new BNode(t);
-               pNode->addLeft(pNew);               // create a new node to the left
-               pNew->balance();
-               
-               pairReturn.first = iterator(pNew);
-               pairReturn.second = true;        // node was added
-               stop = true;
-            }
-        }
-        // pNode is smaller, check the right
-        else
-        {
-            if (pNode->pRight)
-                pNode = pNode->pRight;              // go to the right
-            else
-            {
-               BNode* pNew = new BNode(t);
-               pNode->addRight(pNew);               // create a new node to the right
-               pNew->balance();
-               
-               pairReturn.first = iterator(pNew);
-               pairReturn.second = true;        // node was added
-               stop = true;
-            }
-        }
-    }
-    
-   numElements++;
-   
-   while (this->root->pParent != nullptr)
-      this->root = this->root->pParent;
-   
-   return pairReturn;
-}
-
-template <typename T>
-std::pair<typename BST <T> ::iterator, bool> BST <T> ::insert(T && t, bool keepUnique)
-{
-    std::pair<iterator, bool> pairReturn(end(), false);
-     
-     // if the tree is empty
-     if (root == nullptr)
-     {
-         root = new BNode(std::move(t));
-         root->isRed = false;                    // root is black
-         numElements = 1;                        // only 1 element now
-         pairReturn.first = iterator(root);
-         pairReturn.second = true;               // it was added
-         return pairReturn;
-     }
-     BNode* pNode = root;
-     bool stop = false;
-     
-     while (!stop)
-     {
-         // if the data is already in there and it's meant to be unique
-         if (keepUnique && t == pNode->data)
-         {
-             pairReturn.first = iterator(pNode);
-             pairReturn.second = false;          // it wasn't added because it's meant to be unique
-             return pairReturn;
-         }
-         
-         // t is smaller than pNode, add it to the left
-         if (t < pNode->data)
-         {
-             // is there a node alread on the left?
-             if (pNode->pLeft)
-                 pNode = pNode->pLeft;           // go to the left
-             // no node to left, so add a new one
-             else
-             {
-                BNode* pNew = new BNode(std::move(t));
-                pNode->addLeft(pNew);
-                pNew->balance(); // create a new node to the left
-                
-                pairReturn.first = iterator(pNew);
-                pairReturn.second = true;        // node was added
-                stop = true;
-             }
-         }
-         // pNode is smaller, check the right
-         else
-         {
-             if (pNode->pRight)
-                 pNode = pNode->pRight;              // go to the right
-             else
-             {
-                BNode* pNew = new BNode(std::move(t));
-                pNode->addRight(pNew);
-                pNew->balance(); // create a new node to the right
-                
-                pairReturn.first = iterator(pNew);
-                pairReturn.second = true;        // node was added
-                stop = true;
-             }
-         }
-     }
-     
-   numElements++;
-   
-   while(this->root->pParent != nullptr)
-      this->root = this->root->pParent;
-   
-   return pairReturn;
-
-}
-
-/*************************************************
- * BST :: ERASE
- * Remove a given node as specified by the iterator
- ************************************************/
-template <typename T>
-typename BST <T> ::iterator BST <T> :: erase(iterator & it)
-{
-   if (it == end() || it.pNode == nullptr)
-      return end();
-   
-   BNode* pTarget = it.pNode;
-   
-   iterator itReturn = it;
-   ++itReturn;
-   
-   if (pTarget->pLeft != nullptr && pTarget->pRight != nullptr)
+   /*****************************************************************
+    * BINARY NODE
+    * A single node in a binary tree. Note that the node does not know
+    * anything about the properties of the tree so no validation can be done.
+    *****************************************************************/
+   template <typename T>
+   class BST <T> ::BNode
    {
-      BNode* pSuccessor = pTarget->pRight;
-      while (pSuccessor->pLeft != nullptr)
-         pSuccessor = pSuccessor->pLeft;
-      
-      itReturn = iterator(pSuccessor);
-      
-      BNode* pSuccessorChild = pSuccessor->pRight;
-      if (pSuccessor->pParent != pTarget)
+   public:
+      // 
+      // Construct
+      //
+      BNode()
+         : pLeft(nullptr), pRight(nullptr), pParent(nullptr), data(), isRed(true)
       {
-         pSuccessor->pParent->pLeft = pSuccessorChild;
-         if (pSuccessorChild != nullptr)
-            pSuccessorChild->pParent = pSuccessor->pParent;
-         
-         pSuccessor->pRight = pTarget->pRight;
-         pTarget->pRight->pParent = pSuccessor;
       }
-      
-      pSuccessor->pLeft = pTarget->pLeft;
-      pTarget->pLeft->pParent = pSuccessor;
-      
-      pSuccessor->pParent = pTarget->pParent;
-      if (pTarget->pParent == nullptr)
-         this->root = pSuccessor;
-      else if (pTarget->pParent->pLeft == pTarget)
-         pTarget->pParent->pLeft = pSuccessor;
-      else
-         pTarget->pParent->pRight = pSuccessor;
-   }
-   else
-   {
-      BNode* pChild = (pTarget->pLeft != nullptr) ? pTarget->pLeft : pTarget->pRight;
-      
-      if (pChild != nullptr)
-         pChild->pParent = pTarget->pParent;
-      
-      if (pTarget->pParent == nullptr)
-         this->root = pChild;
-      else if (pTarget->pParent->pLeft == pTarget)
-         pTarget->pParent->pLeft = pChild;
-      else
-         pTarget->pParent->pRight = pChild;
-   }
-   
-   if (pTarget->pParent != nullptr && !pTarget->isRed)
-   {
-      BNode* pChild = (pTarget->pLeft != nullptr) ? pTarget->pLeft : pTarget->pRight;
-      if (pChild != nullptr && pChild->isRed)
-         pChild->isRed = false;
-   }
-   
-   delete pTarget;
-   this->numElements--;
-   it.pNode = nullptr;
-   
-   return itReturn;
-}
-
-/*****************************************************
- * BST :: CLEAR
- * Removes all the BNodes from a tree
- ****************************************************/
-template <typename T>
-void BST <T> ::clear() noexcept
-{
-   BNode* pCurrent = root;
-   
-   while(pCurrent != nullptr)
-   {
-      if(pCurrent->pLeft != nullptr)
-         pCurrent = pCurrent->pLeft;
-      else if(pCurrent->pRight != nullptr)
-         pCurrent = pCurrent->pRight;
-      else
+      BNode(const T& t)
+         : pLeft(nullptr), pRight(nullptr), pParent(nullptr), data(t), isRed(true)
       {
-         BNode* pTemp = pCurrent;
-         pCurrent = pCurrent->pParent;
-         if(pCurrent != nullptr)
-         {
-            if (pCurrent->pLeft == pTemp)
-               pCurrent->pLeft = nullptr;
-            else
-               pCurrent->pRight = nullptr;
-         }
-         else
-            root = nullptr;
-         
-         delete pTemp;
       }
-   }
-   numElements = 0;
-}
+      BNode(T&& t)
+         : pLeft(nullptr), pRight(nullptr), pParent(nullptr), data(std::move(t)), isRed(true)
+      {
+      }
 
-/*****************************************************
- * BST :: BEGIN
- * Return the first node (left-most) in a binary search tree
- ****************************************************/
-template <typename T>
-typename BST <T> :: iterator custom :: BST <T> :: begin() const noexcept
-{
-    // is it empty?
-    if (root == nullptr)
-        return end();               // return the end, which is null
-    
-    BNode* p = root;
-    // find the node all the way to the left
-    while (p->pLeft)
-        p = p->pLeft;
-   return iterator(p);
-}
+      //
+      // Insert
+      //
+      void addLeft(BNode* pNode);
+      void addRight(BNode* pNode);
+      void addLeft(const T& t);
+      void addRight(const T& t);
+      void addLeft(T&& t);
+      void addRight(T&& t);
 
+      // 
+      // Status
+      //
+      bool isRightChild(BNode* pNode) const { return pRight == pNode; }
+      bool isLeftChild(BNode* pNode) const { return pLeft == pNode; }
 
-/****************************************************
- * BST :: FIND
- * Return the node corresponding to a given value
- ****************************************************/
-template <typename T>
-typename BST <T> :: iterator BST<T> :: find(const T & t)
-{
-    BNode * p = root;
-    while (p != nullptr)
-    {
-        if (p->data == t)
-            return iterator(p);
-        else if (t < p->data)
-            p = p->pLeft;
-        else
-            p = p->pRight;
-    }
-   return end();
-}
-
-/******************************************************
- ******************************************************
- ******************************************************
- *********************** B NODE ***********************
- ******************************************************
- ******************************************************
- ******************************************************/
-
- 
-/******************************************************
- * BINARY NODE :: ADD LEFT
- * Add a node to the left of the current node
- ******************************************************/
-template <typename T>
-void BST <T> :: BNode :: addLeft (BNode * pNode)
-{
-   if (pNode != nullptr)
-      pNode->pParent = this;
-   this->pLeft = pNode;
-}
-
-/******************************************************
- * BINARY NODE :: ADD RIGHT
- * Add a node to the right of the current node
- ******************************************************/
-template <typename T>
-void BST <T> :: BNode :: addRight (BNode * pNode)
-{
-   if (pNode != nullptr)
-      pNode->pParent = this;
-   this->pRight = pNode;
-}
-
-/******************************************************
- * BINARY NODE :: ADD LEFT
- * Add a node to the left of the current node
- ******************************************************/
-template <typename T>
-void BST<T> :: BNode :: addLeft (const T & t)
-{
-    // create a node with given data
-    BNode* pNode = new BNode(t);
-    // add it to the left with method
-    addLeft(pNode);
-    pNode->balance();               // balance it!
-}
-
-/******************************************************
- * BINARY NODE :: ADD LEFT
- * Add a node to the left of the current node
- ******************************************************/
-template <typename T>
-void BST<T> ::BNode::addLeft(T && t)
-{
-    // create a node with given data and move function
-    BNode* pNode = new BNode(std::move(t));
-    // add it to the left with method
-    addLeft(pNode);
-    pNode->balance();               // balance it!
-
-}
-
-/******************************************************
- * BINARY NODE :: ADD RIGHT
- * Add a node to the right of the current node
- ******************************************************/
-template <typename T>
-void BST <T> :: BNode :: addRight (const T & t)
-{
-    // new node with t
-    BNode * pNode = new BNode(t);
-    // add it to the right
-    addRight(pNode);
-    pNode->balance();               // balance
-
-}
-
-/******************************************************
- * BINARY NODE :: ADD RIGHT
- * Add a node to the right of the current node
- ******************************************************/
-template <typename T>
-void BST <T> ::BNode::addRight(T && t)
-{
-    // new node with t
-    BNode * pNode = new BNode(std::move(t));
-    // add it to the right
-    addRight(pNode);
-    pNode->balance();               // balance
-}
+      // balance the tree
+      void balance();
 
 #ifdef DEBUG
-/****************************************************
- * BINARY NODE :: FIND DEPTH
- * Find the depth of the black nodes. This is useful for
- * verifying that a given red-black tree is valid
- ****************************************************/
-template <typename T>
-int BST <T> :: BNode :: findDepth() const
-{
-   // if there are no children, the depth is ourselves
-   if (pRight == nullptr && pLeft == nullptr)
-      return (isRed ? 0 : 1);
-
-   // if there is a right child, go that way
-   if (pRight != nullptr)
-      return (isRed ? 0 : 1) + pRight->findDepth();
-   else
-      return (isRed ? 0 : 1) + pLeft->findDepth();
-}
-
-/****************************************************
- * BINARY NODE :: VERIFY RED BLACK
- * Do all four red-black rules work here?
- ***************************************************/
-template <typename T>
-bool BST <T> :: BNode :: verifyRedBlack(int depth) const
-{
-   bool fReturn = true;
-   depth -= (isRed == false) ? 1 : 0;
-
-   // Rule a) Every node is either red or black
-   assert(isRed == true || isRed == false); // this feels silly
-
-   // Rule b) The root is black
-   if (pParent == nullptr)
-      if (isRed == true)
-         fReturn = false;
-
-   // Rule c) Red nodes have black children
-   if (isRed == true)
-   {
-      if (pLeft != nullptr)
-         if (pLeft->isRed == true)
-            fReturn = false;
-
-      if (pRight != nullptr)
-         if (pRight->isRed == true)
-            fReturn = false;
-   }
-
-   // Rule d) Every path from a leaf to the root has the same # of black nodes
-   if (pLeft == nullptr && pRight && nullptr)
-      if (depth != 0)
-         fReturn = false;
-   if (pLeft != nullptr)
-      if (!pLeft->verifyRedBlack(depth))
-         fReturn = false;
-   if (pRight != nullptr)
-      if (!pRight->verifyRedBlack(depth))
-         fReturn = false;
-
-   return fReturn;
-}
-
-
-/******************************************************
- * VERIFY B TREE
- * Verify that the tree is correctly formed
- ******************************************************/
-template <typename T>
-std::pair <T, T> BST <T> :: BNode :: verifyBTree() const
-{
-   // largest and smallest values
-   std::pair <T, T> extremes;
-   extremes.first = data;
-   extremes.second = data;
-
-   // check parent
-   if (pParent)
-      assert(pParent->pLeft == this || pParent->pRight == this);
-
-   // check left, the smaller sub-tree
-   if (pLeft)
-   {
-      assert(!(data < pLeft->data));
-      assert(pLeft->pParent == this);
-      pLeft->verifyBTree();
-      std::pair <T, T> p = pLeft->verifyBTree();
-      assert(!(data < p.second));
-      extremes.first = p.first;
-
-   }
-
-   // check right
-   if (pRight)
-   {
-      assert(!(pRight->data < data));
-      assert(pRight->pParent == this);
-      pRight->verifyBTree();
-
-      std::pair <T, T> p = pRight->verifyBTree();
-      assert(!(p.first < data));
-      extremes.second = p.second;
-   }
-
-   // return answer
-   return extremes;
-}
-
-/*********************************************
- * COMPUTE SIZE
- * Verify that the BST is as large as we think it is
- ********************************************/
-template <typename T>
-int BST <T> :: BNode :: computeSize() const
-{
-   return 1 +
-      (pLeft  == nullptr ? 0 : pLeft->computeSize()) +
-      (pRight == nullptr ? 0 : pRight->computeSize());
-}
+      //
+      // Verify
+      //
+      std::pair <T, T> verifyBTree() const;
+      int findDepth() const;
+      bool verifyRedBlack(int depth) const;
+      int computeSize() const;
 #endif // DEBUG
 
-/******************************************************
- * BINARY NODE :: BALANCE
- * Balance the tree from a given location
- ******************************************************/
-template <typename T>
-void BST <T> :: BNode :: balance()
-{
-   // Case 1: if we are the root, then color ourselves black and call it a day.
-    if (!pParent)
-    {
-        isRed = false;   // root is black
-        return;
-    }
-   // Case 2: if the parent is black, then there is nothing left to do
-    if (!pParent->isRed)
-        return;
-    
-    // figure out the family members
-    BNode* pGranny = pParent->pParent;
-    if (!pGranny)
-       return;
-   
-   BNode* pAunt = nullptr;
-   if (pGranny->pLeft == pParent)
-      pAunt = pGranny->pRight;
-   else
-      pAunt = pGranny->pLeft;
-    
-   // Case 3: if the aunt is red, then just recolor
-    if (pAunt != nullptr && pAunt->isRed == true)
-    {
-        pParent->isRed = false;             // parent is black
-        pAunt->isRed = false;               // right of root is black
-        pGranny->isRed = true;              // root is red
-        pGranny->balance();
-        return;
-    }
+      //
+      // Data
+      //
+      T data;                  // Actual data stored in the BNode
+      BNode* pLeft;            // Left child - smaller
+      BNode* pRight;           // Right child - larger
+      BNode* pParent;          // Parent
+      bool isRed;              // Red-black balancing stuff
+   };
 
-   // Case 4: if the aunt is black or non-existant, then we need to rotate
-   BNode* pGreatGrandparent = pGranny->pParent;
-   BNode* pHead = nullptr;
-   
-   // Case 4a: We are mom's left and mom is granny's left
-    if (pParent->pLeft == this && pGranny->pLeft == pParent)
-    {
-       BNode* pSibling = pParent->pRight;
-       pParent->addRight(pGranny);
-       pGranny->addLeft(pSibling);
-       pHead = pParent;
-       
-       pParent->isRed = false;
-       pGranny->isRed = true;
-    }
-   // case 4b: We are mom's right and mom is granny's right
-    else if (pParent->pRight == this && pGranny->pRight == pParent)
-    {
-       BNode* pSibling = pParent->pLeft;
-       pParent->addLeft(pGranny);          // granny rotated to left
-       pGranny->addRight(pSibling);        // siblings roatated to granny's left
-       pHead = pParent;
-        
-       pParent->isRed = false;             // Parent is black
-       pGranny->isRed = true;              // granny is red
-    }
-   // Case 4c: We are mom's right and mom is granny's left
-    else if (pParent->pRight == this && pGranny->pLeft == pParent)
-    {
-       BNode* pLeftChild = this->pLeft;
-       BNode* pRightChild = this->pRight;
-       
-       pParent->pRight = pLeftChild;
-       if (pLeftChild)
-          pLeftChild->pParent = pParent;
-       
-       pGranny->pLeft = pRightChild;
-       if (pRightChild)
-          pRightChild->pParent = pGranny;
-       
-       this->pLeft = pParent;
-       pParent->pParent = this;
-       
-       this->pRight = pGranny;
-       pGranny->pParent = this;
-       
-       pHead = this;
-        
-       this->isRed = false;
-       pGranny->isRed = true;
-    }
-    
-   // case 4d: we are mom's left and mom is granny's right
-    else if (pParent->pLeft == this && pGranny->pRight == pParent)
-    {
-       BNode* pLeftChild = this->pLeft;
-       BNode* pRightChild = this->pRight;
-       
-       pGranny->pRight = pLeftChild;
-       if (pLeftChild)
-          pLeftChild->pParent = pGranny;
-       
-       pParent->pLeft = pRightChild;
-       if (pRightChild)
-          pRightChild->pParent = pParent;
-        
-       this->pLeft = pGranny;
-       pGranny->pParent = this;
-       
-       this->pRight = pParent;
-       pParent->pParent = this;
-       
-       pHead = this;
-        
-       this->isRed = false;
-       pGranny->isRed = true;
-        
-    }
-   if (pHead != nullptr)
-   {
-      pHead->pParent = pGreatGrandparent;
-      if (pGreatGrandparent != nullptr)
+   /**********************************************************
+    * BINARY SEARCH TREE ITERATOR
+    * Forward and reverse iterator through a BST
+    *********************************************************/
+   template <typename T>
+   class BST <T> ::iterator
+   { 
+      friend class ::TestBST; // give unit tests access to the privates
+      friend class ::TestSet;
+      friend class ::TestMap;
+
+      template <class KK, class VV>
+      friend class custom::map;
+   public:
+      // constructors and assignment
+      iterator(BNode* p = nullptr)
       {
-         if (pGreatGrandparent->pLeft == pGranny)
-            pGreatGrandparent->pLeft = pHead;
+         pNode = p;
+      }
+      iterator(const iterator& rhs)
+      {
+         pNode = rhs.pNode;
+      }
+      iterator& operator = (const iterator& rhs)
+      {
+         pNode = rhs.pNode;
+         return *this;
+      }
+
+      // compare
+      bool operator == (const iterator& rhs) const
+      {
+         // only need to compare the leaf node 
+         return rhs.pNode == pNode;
+      }
+      bool operator != (const iterator& rhs) const
+      {
+         // only need to compare the leaf node 
+         return rhs.pNode != pNode;
+      }
+
+      // de-reference. Cannot change because it will invalidate the BST
+      const T& operator * () const
+      {
+         return pNode->data;
+      }
+
+      // increment and decrement
+      iterator& operator ++ ();
+      iterator  operator ++ (int postfix)
+      {
+         iterator itReturn = *this;
+         ++(*this);
+         return itReturn;
+      }
+      iterator& operator -- ();
+      iterator  operator -- (int postfix)
+      {
+         iterator itReturn = *this;
+         --(*this);
+         return itReturn;
+      }
+
+      // must give friend status to remove so it can call getNode() from it
+      friend BST <T> ::iterator BST <T> ::erase(iterator& it);
+
+   private:
+
+      // the node
+      BNode* pNode;
+   };
+
+
+   /*********************************************
+    *********************************************
+    *********************************************
+    ******************** BST ********************
+    *********************************************
+    *********************************************
+    *********************************************/
+
+
+    /*********************************************
+     * BST :: DEFAULT CONSTRUCTOR
+     ********************************************/
+   template <typename T>
+   BST <T> ::BST()
+      : root(nullptr), numElements(0)
+   {
+   }
+
+   /*********************************************
+    * BST :: COPY CONSTRUCTOR
+    * Copy one tree to another
+    ********************************************/
+   template <typename T>
+   BST <T> ::BST(const BST<T>& rhs)
+      : root(nullptr), numElements(0)
+   {
+      // call the assignment operator
+      *this = rhs;
+   }
+
+   /*********************************************
+    * BST :: MOVE CONSTRUCTOR
+    * Move one tree to another
+    ********************************************/
+   template <typename T>
+   BST <T> ::BST(BST <T>&& rhs)
+      : root(nullptr), numElements(0)
+   {
+      // move the nodes and set the RHS to empty
+      root = rhs.root;
+      rhs.root = nullptr;
+
+      // move the number of elements and set the RHS to empty
+      numElements = rhs.numElements;
+      rhs.numElements = 0;
+   }
+
+   /*********************************************
+    * BST :: INITIALIZER LIST CONSTRUCTOR
+    * Create a BST from an initializer list
+    ********************************************/
+   template <typename T>
+   BST <T> ::BST(const std::initializer_list<T>& il)
+      : root(nullptr), numElements(0)
+   {
+      // just call the assignmnent operator
+      *this = il;
+   }
+
+   /*********************************************
+    * BST :: DESTRUCTOR
+    ********************************************/
+   template <typename T>
+   BST <T> :: ~BST()
+   {
+      clear();
+   }
+
+
+   /*********************************************
+    * BST :: ASSIGNMENT OPERATOR
+    * Copy one tree to another
+    ********************************************/
+   template <typename T>
+   BST <T>& BST <T> :: operator = (const BST <T>& rhs)
+   {
+      copyBinaryTree(rhs.root, this->root);
+      assert(nullptr == this->root || this->root->pParent == nullptr);
+      this->numElements = rhs.numElements;
+
+      return *this;
+   }
+
+   /*********************************************
+    * BST :: ASSIGNMENT OPERATOR with INITIALIZATION LIST
+    * Copy nodes onto a BTree
+    ********************************************/
+   template <typename T>
+   BST <T>& BST <T> :: operator = (const std::initializer_list<T>& il)
+   {
+      // we cannot preserve the nodes so we must start from scratch
+      deleteBinaryTree(root);
+      numElements = 0;
+
+      // for each element in the initializer list, add into the BST using insert()
+      for (auto&& element : il)
+         insert(element);
+
+
+      return *this;
+   }
+
+   /*********************************************
+    * BST :: ASSIGN-MOVE OPERATOR
+    * Move one tree to another
+    ********************************************/
+   template <typename T>
+   BST <T>& BST <T> :: operator = (BST <T>&& rhs)
+   {
+      // clear the old bst
+      clear();
+
+      // swap the trees
+      swap(rhs);
+
+      return *this;
+   }
+
+   /*********************************************
+    * BST :: SWAP
+    * Swap two trees
+    ********************************************/
+   template <typename T>
+   void BST <T> ::swap(BST <T>& rhs)
+   {
+      std::swap(rhs.root, root);
+      std::swap(rhs.numElements, numElements);
+   }
+
+   /*****************************************************
+    * BST :: INSERT
+    * Insert a node at a given location in the tree
+    ****************************************************/
+   template <typename T>
+   std::pair<typename BST <T> ::iterator, bool> BST <T> ::insert(const T& t, bool keepUnique)
+   {
+      std::pair<iterator, bool> pairReturn(end(), false);
+      try
+      {
+         // if we are at a trivial state (empty tree), then create a new root
+         if (root == nullptr)
+         {
+            assert(numElements == 0);
+            root = new BNode(t);
+            root->isRed = false;
+            numElements = 1;
+            pairReturn.first = iterator(root);
+            pairReturn.second = true;
+            return pairReturn;
+         }
+
+         // otherwise, go a searching for the correct spot
+         BNode* node = root;
+         bool done = false;
+         while (!done)
+         {
+            // if the node is a match, then do nothing
+            if (keepUnique && t == node->data)
+            {
+               pairReturn.first = iterator(node);
+               pairReturn.second = false;
+               return pairReturn;
+            }
+
+            // if the center node is larger, go left
+            if (t < node->data)
+            {
+               // if there is a node to the left, follow it
+               if (node->pLeft)
+                  node = node->pLeft;
+               // if we are at the leaf, then create a new node
+               else
+               {
+                  node->addLeft(t);
+                  done = true;
+                  pairReturn.first = iterator(node->pLeft);
+                  pairReturn.second = true;
+               }
+            }
+
+            // if the center node is smaller, go right
+            else
+            {
+               // if there is a node to the right, follow it
+               if (node->pRight)
+                  node = node->pRight;
+               // if we are at the left, then create a new node.
+               else
+               {
+                  node->addRight(t);
+                  done = true;
+                  pairReturn.first = iterator(node->pRight);
+                  pairReturn.second = true;
+               }
+            }
+         }
+         // we just inserted something!
+         assert(root != nullptr);
+         numElements++;
+
+         // if the root moved out from under us, find it again.
+         while (root->pParent != nullptr)
+            root = root->pParent;
+         assert(root->pParent == nullptr);
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+      return pairReturn;
+   }
+
+   template <typename T>
+   std::pair<typename BST <T> ::iterator, bool> BST <T> ::insert(T&& t, bool keepUnique)
+   {
+      std::pair<iterator, bool> pairReturn(end(), false);
+      try
+      {
+         // if we are at a trivial state (empty tree), then create a new root
+         if (root == nullptr)
+         {
+            assert(numElements == 0);
+            root = new BNode(std::move(t));
+            root->isRed = false;
+            numElements = 1;
+            pairReturn.first = iterator(root);
+            pairReturn.second = true;
+            return pairReturn;
+         }
+
+         // otherwise, go a searching for the correct spot
+         BNode* node = root;
+         bool done = false;
+         while (!done)
+         {
+            // if the node is a match, then do nothing
+            if (keepUnique && t == node->data)
+            {
+               pairReturn.first = iterator(node);
+               pairReturn.second = false;
+               return pairReturn;
+            }
+
+            // if the center node is larger, go left
+            if (t < node->data)
+            {
+               // if there is a node to the left, follow it
+               if (node->pLeft)
+                  node = node->pLeft;
+               // if we are at the leaf, then create a new node
+               else
+               {
+                  node->addLeft(std::move(t));
+                  done = true;
+                  pairReturn.first = iterator(node->pLeft);
+                  pairReturn.second = true;
+               }
+            }
+
+            // if the center node is smaller, go right
+            else
+            {
+               // if there is a node to the right, follow it
+               if (node->pRight)
+                  node = node->pRight;
+               // if we are at the left, then create a new node.
+               else
+               {
+                  node->addRight(std::move(t));
+                  done = true;
+                  pairReturn.first = iterator(node->pRight);
+                  pairReturn.second = true;
+               }
+            }
+         }
+         // we just inserted something!
+         assert(root != nullptr);
+         numElements++;
+
+         // if the root moved out from under us, find it again.
+         while (root->pParent != nullptr)
+            root = root->pParent;
+         assert(root->pParent == nullptr);
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+      return pairReturn;
+   }
+
+   /*************************************************
+    * BST :: ERASE
+    * Remove a given node as specified by the iterator
+    ************************************************/
+   template <typename T>
+   typename BST <T> ::iterator BST <T> ::erase(iterator& it)
+   {
+      // do nothing if there is nothing to do
+      if (it == end())
+         return end();
+
+      // remember where we were
+      iterator itNext = it;
+      BNode* pDelete = it.pNode;
+
+      // if there is only one child (right) or no children (how sad!)
+      if (pDelete->pLeft == nullptr)
+      {
+         ++itNext;
+         deleteNode(pDelete, true /* goRight */);
+      }
+
+      // if there is only one child (left)
+      else if (pDelete->pRight == nullptr)
+      {
+         ++itNext;
+         deleteNode(pDelete, false /* goRight */);
+      }
+
+      // otherwise, swap places with the in-order successor
+      else
+      {
+         // find the in-order successor (IOS)
+         BNode* pIOS = pDelete->pRight;
+         while (pIOS->pLeft != nullptr)
+            pIOS = pIOS->pLeft;
+
+         // the IOS must not have a right node. Now it will take pDelete's place.
+         assert(pIOS->pLeft == nullptr);
+         pIOS->pLeft = pDelete->pLeft;
+         if (pDelete->pLeft)
+            pDelete->pLeft->pParent = pIOS;
+
+         // if the IOS is not direct right sibling, then put it in the place of pDelete
+         if (pDelete->pRight != pIOS)
+         {
+            // if the IOS has a right sibling, then it takes his place
+            if (pIOS->pRight)
+               pIOS->pRight->pParent = pIOS->pParent;
+            pIOS->pParent->pLeft = pIOS->pRight;
+
+            // make IOS's right child pDelete's right child
+            assert(pDelete->pRight != nullptr);
+            pIOS->pRight = pDelete->pRight;
+            pDelete->pRight->pParent = pIOS;
+         }
+
+         // hook up pIOS's successor
+         pIOS->pParent = pDelete->pParent;
+         if (pDelete->pParent && pDelete->pParent->pLeft == pDelete)
+            pDelete->pParent->pLeft = pIOS;
+         if (pDelete->pParent && pDelete->pParent->pRight == pDelete)
+            pDelete->pParent->pRight = pIOS;
+
+         // what if that was the root?!?!
+         if (root == pDelete)
+            root = pIOS;
+
+         itNext = iterator(pIOS);
+      }
+
+      numElements--;
+      delete pDelete;
+      return itNext;
+   }
+
+   /*****************************************************
+    * BST :: CLEAR
+    * Removes all the BNodes from a tree
+    ****************************************************/
+   template <typename T>
+   void BST <T> ::clear() noexcept
+   {
+      if (root)
+         deleteBinaryTree(root);
+      numElements = 0;
+   }
+
+   /*****************************************************
+    * BST :: BEGIN
+    * Return the first node (left-most) in a binary search tree
+    ****************************************************/
+   template <typename T>
+   typename BST <T> ::iterator custom::BST <T> ::begin() const noexcept
+   {
+      // if the BST is empty, return the nullptr iterator. 
+      if (root == nullptr)
+         return end();
+
+      // otherwise, find the left-most node;
+      BNode* p = root;
+      while (p->pLeft)
+         p = p->pLeft;
+      return iterator(p);
+   }
+
+#ifdef NEVER
+   /*****************************************************
+    * BST :: RBEGIN
+    * Return the last node (right-most) in a binary search tree
+    ****************************************************/
+   template <typename T>
+   typename BST <T> ::iterator  BST <T> ::rbegin() const noexcept
+   {
+      // if the BST is empty, return the nullptr iterator.
+      if (root == nullptr)
+         return end();
+
+      // otherwise, find the left-most node;
+      BNode* p = root;
+      while (p->pRight)
+         p = p->pRight;
+      return iterator(p);
+   }
+#endif // NEVER
+
+   /****************************************************
+    * BST :: FIND
+    * Return the node corresponding to a given value
+    ****************************************************/
+   template <typename T>
+   typename BST <T> ::iterator BST<T> ::find(const T& t)
+   {
+      // perform a binary search using a non-recursive solution
+      for (BNode* p = root; p != nullptr; p = (t < p->data ? p->pLeft : p->pRight))
+         if (p->data == t)
+            return iterator(p);
+
+      // nothing was found so return the nullptr iterator
+      return end();
+   }
+
+   /*****************************************************
+    * DELETE BINARY TREE
+    * Delete all the nodes below pThis including pThis
+    * using postfix traverse: LRV
+    ****************************************************/
+   template <typename T>
+   void BST <T> ::deleteBinaryTree(BNode*& pDelete) noexcept
+   {
+      if (pDelete == nullptr)
+         return;
+      deleteBinaryTree(pDelete->pLeft);   // L
+      deleteBinaryTree(pDelete->pRight);  // R
+
+      delete pDelete;                     // V
+      pDelete = nullptr;
+   }
+
+   /**********************************************
+    * COPY BINARY TREE
+    * Copy pSrc->pRight to pDest->pRight and
+    * pSrc->pLeft onto pDest->pLeft
+    *********************************************/
+   template <typename T>
+   void BST <T> ::copyBinaryTree(const BNode* pSrc, BNode*& pDest)
+   {
+      // if there is no node in pSrc, then do nothing
+      if (nullptr == pSrc)
+      {
+         deleteBinaryTree(pDest);
+         return;
+      }
+
+      assert(pSrc);
+      // if there is not a node for pDest, then allocate one
+      try
+      {
+         if (nullptr == pDest)
+            pDest = new BST::BNode(pSrc->data);    // V
+         // otherwise, assign the data over
          else
-            pGreatGrandparent->pRight = pHead;
+            pDest->data = pSrc->data;
       }
-   }
-}
-
-/*************************************************
- *************************************************
- *************************************************
- ****************** ITERATOR *********************
- *************************************************
- *************************************************
- *************************************************/
-
-/**************************************************
- * BST ITERATOR :: INCREMENT PREFIX
- * advance by one
- *************************************************/
-template <typename T>
-typename BST <T> :: iterator & BST <T> :: iterator :: operator ++ ()
-{
-   if (pNode == nullptr)
-      return *this;
-   
-   if (pNode->pRight != nullptr)
-   {
-      pNode = pNode->pRight;
-      while(pNode->pLeft != nullptr)
-         pNode = pNode->pLeft;
-   }
-   else
-   {
-      BNode* pTemp = pNode;
-      pNode = pNode->pParent;
-      while(pNode != nullptr && pTemp == pNode->pRight)
+      catch (...)
       {
-         pTemp = pNode;
-         pNode = pNode->pParent;
+         throw "ERROR: Unable to allocate a node";
+      }
+      assert(pDest != nullptr);
+
+      // copy over the red-black stuff
+      pDest->isRed = pSrc->isRed;
+
+      // handle the children to the right and left
+      copyBinaryTree(pSrc->pLeft, pDest->pLeft);     // L
+      if (pSrc->pLeft)
+         pDest->pLeft->pParent = pDest;
+
+      copyBinaryTree(pSrc->pRight, pDest->pRight);   // R
+      if (pDest->pRight)
+         pDest->pRight->pParent = pDest;
+   }
+
+   /****************************************************
+    * DELETE NODE
+    * Delete a single node (pDelete) from the tree indicated
+    * by a node (pDelete).
+    *    pDelete     the node to be deleted
+    *    toRight     should the right branch inherit our place?
+    ****************************************************/
+   template <typename T>
+   void BST <T> ::deleteNode(BNode*& pDelete, bool toRight)
+   {
+      // shift everything up
+      BNode* pNext = (toRight ? pDelete->pRight : pDelete->pLeft);
+
+      // if we are not the parent, hook ourselves into the existing tree
+      if (pDelete != root)
+      {
+         if (pDelete->pParent->pLeft == pDelete)
+         {
+            pDelete->pParent->pLeft = nullptr;
+            pDelete->pParent->addLeft(pNext);
+         }
+         else
+         {
+            pDelete->pParent->pRight = nullptr;
+            pDelete->pParent->addRight(pNext);
+         }
+      }
+
+      // otherwise, the pNext is the new root
+      else
+      {
+         root = pNext;
+         pNext->pParent = nullptr;
       }
    }
-   return *this;
-}
 
-/**************************************************
- * BST ITERATOR :: DECREMENT PREFIX
- * advance by one
- *************************************************/
-template <typename T>
-typename BST <T> :: iterator & BST <T> :: iterator :: operator -- ()
-{
-   if (pNode == nullptr)
-      return *this;
-   
-   if (pNode->pLeft != nullptr)
+   /******************************************************
+    ******************************************************
+    ******************************************************
+    *********************** B NODE ***********************
+    ******************************************************
+    ******************************************************
+    ******************************************************/
+
+
+    /******************************************************
+     * BINARY NODE :: ADD LEFT
+     * Add a node to the left of the current node
+     ******************************************************/
+   template <typename T>
+   void BST <T> ::BNode::addLeft(BNode* pNode)
    {
-      pNode = pNode->pLeft;
-      while(pNode->pRight != nullptr)
+      pLeft = pNode;
+      if (pNode)
+         pNode->pParent = this;
+   }
+
+   /******************************************************
+    * BINARY NODE :: ADD RIGHT
+    * Add a node to the right of the current node
+    ******************************************************/
+   template <typename T>
+   void BST <T> ::BNode::addRight(BNode* pNode)
+   {
+      pRight = pNode;
+      if (pNode)
+         pNode->pParent = this;
+   }
+
+   /******************************************************
+    * BINARY NODE :: ADD LEFT
+    * Add a node to the left of the current node
+    ******************************************************/
+   template <typename T>
+   void BST<T> ::BNode::addLeft(const T& t)
+   {
+      assert(pLeft == nullptr);
+
+      try
+      {
+         BNode* pNode = new BNode(t);
+         addLeft(pNode);
+         pNode->balance();
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+   }
+
+   /******************************************************
+    * BINARY NODE :: ADD LEFT
+    * Add a node to the left of the current node
+    ******************************************************/
+   template <typename T>
+   void BST<T> ::BNode::addLeft(T&& t)
+   {
+      assert(pLeft == nullptr);
+
+      try
+      {
+         BNode* pNode = new BNode(std::move(t));
+         addLeft(pNode);
+         pNode->balance();
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+   }
+
+   /******************************************************
+    * BINARY NODE :: ADD RIGHT
+    * Add a node to the right of the current node
+    ******************************************************/
+   template <typename T>
+   void BST <T> ::BNode::addRight(const T& t)
+   {
+      assert(pRight == nullptr);
+
+      try
+      {
+         BNode* pNode = new BNode(t);
+         addRight(pNode);
+         pNode->balance();
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+   }
+
+   /******************************************************
+    * BINARY NODE :: ADD RIGHT
+    * Add a node to the right of the current node
+    ******************************************************/
+   template <typename T>
+   void BST <T> ::BNode::addRight(T&& t)
+   {
+      assert(pRight == nullptr);
+
+      try
+      {
+         BNode* pNode = new BNode(std::move(t));
+         addRight(pNode);
+         pNode->balance();
+      }
+      catch (...)
+      {
+         throw "ERROR: Unable to allocate a node";
+      }
+   }
+
+#ifdef DEBUG
+   /****************************************************
+    * BINARY NODE :: FIND DEPTH
+    * Find the depth of the black nodes. This is useful for
+    * verifying that a given red-black tree is valid
+    ****************************************************/
+   template <typename T>
+   int BST <T> ::BNode::findDepth() const
+   {
+      // if there are no children, the depth is ourselves
+      if (pRight == nullptr && pLeft == nullptr)
+         return (isRed ? 0 : 1);
+
+      // if there is a right child, go that way
+      if (pRight != nullptr)
+         return (isRed ? 0 : 1) + pRight->findDepth();
+      else
+         return (isRed ? 0 : 1) + pLeft->findDepth();
+   }
+
+   /****************************************************
+    * BINARY NODE :: VERIFY RED BLACK
+    * Do all four red-black rules work here?
+    ***************************************************/
+   template <typename T>
+   bool BST <T> ::BNode::verifyRedBlack(int depth) const
+   {
+      bool fReturn = true;
+      depth -= (isRed == false) ? 1 : 0;
+
+      // Rule a) Every node is either red or black
+      assert(isRed == true || isRed == false); // this feels silly
+
+      // Rule b) The root is black
+      if (pParent == nullptr)
+         if (isRed == true)
+            fReturn = false;
+
+      // Rule c) Red nodes have black children
+      if (isRed == true)
+      {
+         if (pLeft != nullptr)
+            if (pLeft->isRed == true)
+               fReturn = false;
+
+         if (pRight != nullptr)
+            if (pRight->isRed == true)
+               fReturn = false;
+      }
+
+      // Rule d) Every path from a leaf to the root has the same # of black nodes
+      if (pLeft == nullptr && pRight && nullptr)
+         if (depth != 0)
+            fReturn = false;
+      if (pLeft != nullptr)
+         if (!pLeft->verifyRedBlack(depth))
+            fReturn = false;
+      if (pRight != nullptr)
+         if (!pRight->verifyRedBlack(depth))
+            fReturn = false;
+
+      return fReturn;
+   }
+
+
+   /******************************************************
+    * VERIFY B TREE
+    * Verify that the tree is correctly formed
+    ******************************************************/
+   template <typename T>
+   std::pair <T, T> BST <T> ::BNode::verifyBTree() const
+   {
+      // largest and smallest values
+      std::pair <T, T> extremes;
+      extremes.first = data;
+      extremes.second = data;
+
+      // check parent
+      if (pParent)
+         assert(pParent->pLeft == this || pParent->pRight == this);
+
+      // check left, the smaller sub-tree
+      if (pLeft)
+      {
+         assert(!(data < pLeft->data));
+         assert(pLeft->pParent == this);
+         pLeft->verifyBTree();
+         std::pair <T, T> p = pLeft->verifyBTree();
+         assert(!(data < p.second));
+         extremes.first = p.first;
+
+      }
+
+      // check right
+      if (pRight)
+      {
+         assert(!(pRight->data < data));
+         assert(pRight->pParent == this);
+         pRight->verifyBTree();
+
+         std::pair <T, T> p = pRight->verifyBTree();
+         assert(!(p.first < data));
+         extremes.second = p.second;
+      }
+
+      // return answer
+      return extremes;
+   }
+
+   /*********************************************
+    * COMPUTE SIZE
+    * Verify that the BST is as large as we think it is
+    ********************************************/
+   template <typename T>
+   int BST <T> ::BNode::computeSize() const
+   {
+      return 1 +
+         (pLeft == nullptr ? 0 : pLeft->computeSize()) +
+         (pRight == nullptr ? 0 : pRight->computeSize());
+   }
+#endif // DEBUG
+
+   /******************************************************
+    * BINARY NODE :: BALANCE
+    * Balance the tree from a given location
+    ******************************************************/
+   template <typename T>
+   void BST <T> ::BNode::balance()
+   {
+      // Case 1: if we are the root, then color ourselves black and call it a day.
+      if (pParent == nullptr)
+      {
+         isRed = false;
+         return;
+      }
+
+      // Case 2: if the parent is black, then there is nothing left to do
+      if (pParent->isRed == false)
+      {
+         return;
+      }
+
+      // we better have a grandparent.  Otherwise there is a red node at the root
+      assert(pParent->pParent != nullptr);
+
+      // find my relatives
+      BNode* pGranny = pParent->pParent;
+      BNode* pGreatG = pGranny->pParent;
+      BNode* pSibling =
+         pParent->isRightChild(this) ? pParent->pLeft : pParent->pRight;
+      BNode* pAunt =
+         pGranny->isRightChild(pParent) ? pGranny->pLeft : pGranny->pRight;
+
+      // verify things are as they should be
+      assert(pGranny != nullptr);          // I should have a grandparent here
+      assert(pGranny->isRed == false);  // if granny is red, we violate red-red!
+
+      // Case 3: if the aunt is red, then just recolor
+      if (pAunt != nullptr && pAunt->isRed == true)
+      {
+         pGranny->isRed = true;         // grandparent becomes red
+         pParent->isRed = false;        // parent becomes black
+         pAunt->isRed = false;          // aunt becomes black
+         pGranny->balance();            // balance granny!
+         return;
+      }
+
+
+      // Case 4: if the aunt is black or non-existant, then we need to rotate
+      assert(pParent->isRed == true && pGranny->isRed == false &&
+         (pAunt == nullptr || pAunt->isRed == false));
+
+      // the new top of the sub-tree
+      BNode* pHead = nullptr;
+
+      // Case 4a: We are mom's left and mom is granny's left
+      if (pParent->isLeftChild(this) && pGranny->isLeftChild(pParent))
+      {
+         // verify case 4a is as it should be
+         assert(pParent->pLeft == this);
+         assert(pGranny->pRight == pAunt);
+         assert(pGranny->isRed == false);
+
+         // perform the necessary rotation
+         pParent->addRight(pGranny);
+         pGranny->addLeft(pSibling);
+         pHead = pParent;
+
+         // set the colors
+         pParent->isRed = false;
+         pGranny->isRed = true;
+      }
+
+      // case 4b: We are mom's right and mom is granny's right
+      else if (pParent->isRightChild(this) && pGranny->isRightChild(pParent))
+      {
+         // verify case 4b is as it should be
+         assert(pParent->pRight == this);
+         assert(pGranny->pLeft == pAunt);
+         assert(pGranny->isRed == false);
+
+         // perform the necessary rotation
+         pParent->addLeft(pGranny);
+         pGranny->addRight(pSibling);
+         pHead = pParent;
+
+         // set the colors
+         pParent->isRed = false;
+         pGranny->isRed = true;
+      }
+
+      // Case 4c: We are mom's right and mom is granny's left
+      else if (pParent->isRightChild(this) && pGranny->isLeftChild(pParent))
+      {
+         // verify case 4c is as it should be
+         assert(pGranny->pRight == pAunt);
+         assert(pParent->pLeft == pSibling);
+         assert(pParent->isRed == true);
+
+         // perform the necessary rotation
+         pGranny->addLeft(this->pRight);
+         pParent->addRight(this->pLeft);
+         this->addRight(pGranny);
+         this->addLeft(pParent);
+         pHead = this;
+
+         // set the colors
+         this->isRed = false;
+         pGranny->isRed = true;
+      }
+
+      // case 4d: we are mom's left and mom is granny's right
+      else if (pParent->isLeftChild(this) && pGranny->isRightChild(pParent))
+      {
+         // verify case 4d is as it should be
+         assert(pGranny->pLeft == pAunt);
+         assert(pGranny->pRight == pParent);
+         assert(pParent->pRight == pSibling);
+
+         // perform the necessary rotation
+         pGranny->addRight(this->pLeft);
+         pParent->addLeft(this->pRight);
+         this->addLeft(pGranny);
+         this->addRight(pParent);
+         pHead = this;
+
+         // set the colors
+         this->isRed = false;
+         pGranny->isRed = true;
+      }
+
+      // else we are really confused!
+      else
+      {
+         assert(false); // !!
+      }
+
+      // fix up great granny if she is not nullptr
+      if (pGreatG == nullptr)
+         pHead->pParent = nullptr;
+      else if (pGreatG->pRight == pGranny)
+         pGreatG->addRight(pHead);
+      else if (pGreatG->pLeft == pGranny)
+         pGreatG->addLeft(pHead);
+   }
+
+   /*************************************************
+    *************************************************
+    *************************************************
+    ****************** ITERATOR *********************
+    *************************************************
+    *************************************************
+    *************************************************/
+
+    /**************************************************
+     * BST ITERATOR :: INCREMENT PREFIX
+     * advance by one
+     *************************************************/
+   template <typename T>
+   typename BST <T> ::iterator& BST <T> ::iterator :: operator ++ ()
+   {
+      // do nothing if we have nothing
+      if (nullptr == pNode)
+         return *this;
+
+      // if there is a right node, take it
+      if (nullptr != pNode->pRight)
+      {
+         // go right
          pNode = pNode->pRight;
-   }
-   else
-   {
-      BNode* pTemp = pNode;
+
+         // jig left - there might be more left-most children
+         while (pNode->pLeft)
+            pNode = pNode->pLeft;
+         return *this;
+      }
+
+      // there are no right children, the left are done
+      assert(nullptr == pNode->pRight);
+      const BNode* pSave = pNode;
+
+      // go up...
       pNode = pNode->pParent;
-      while(pNode != nullptr && pTemp == pNode->pLeft)
+
+      // if the parent is the nullptr, we are done!
+      if (nullptr == pNode)
+         return *this;
+
+      // if we are the left-child, got to the parent.
+      if (pSave == pNode->pLeft)
+         return *this;
+
+      // we are the right-child, go up as long as we are the right child!
+      while (nullptr != pNode && pSave == pNode->pRight)
       {
-         pTemp = pNode;
+         pSave = pNode;
          pNode = pNode->pParent;
       }
+
+      return *this;
    }
-   return *this;
-}
+
+   /**************************************************
+    * BST ITERATOR :: DECREMENT PREFIX
+    * advance by one
+    *************************************************/
+   template <typename T>
+   typename BST <T> ::iterator& BST <T> ::iterator :: operator -- ()
+   {
+      // do nothing if we have nothing
+      if (nullptr == pNode)
+         return *this;
+
+      // if there is a left node, take it
+      if (nullptr != pNode->pLeft)
+      {
+         // go left
+         pNode = pNode->pLeft;
+
+         // jig right - there might be more right-most children
+         while (pNode->pRight)
+            pNode = pNode->pRight;
+         return *this;
+      }
+
+      // there are no left children, the right are done
+      assert(nullptr == pNode->pLeft);
+      const BNode* pSave = pNode;
+
+      // go up
+      pNode = pNode->pParent;
+
+      // if the parent is the nullptr, we are done!
+      if (nullptr == pNode)
+         return *this;
+
+      // if we are the right-child, got to the parent.
+      if (pSave == pNode->pRight)
+         return *this;
+
+      // we are the left-child, go up as long as we are the left child!
+      while (nullptr != pNode && pSave == pNode->pLeft)
+      {
+         pSave = pNode;
+         pNode = pNode->pParent;
+      }
+
+      return *this;
+   }
 
 
 } // namespace custom
