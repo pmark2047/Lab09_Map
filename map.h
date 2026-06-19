@@ -79,21 +79,21 @@ public:
    //
    map & operator = (const map & rhs) 
    {
-       clear();
-       bst = rhs.bst;               // use BST operators
+       if(this != &rhs)
+           bst = rhs.bst;               // use BST operators
        return *this;
    }
    map & operator = (map && rhs)
    {
-       clear();
-       bst.swap(rhs.bst);           // use BST swap
+       if (this != &rhs)
+           bst = std::move(rhs.bst);           // use BST swap
        return *this;
    }
    map & operator = (const std::initializer_list <Pairs> & il)
    {
-       clear();
+       bst.clear();
        for (const auto &p : il)
-           bst.insert(p);           // use BST insert
+           bst.insert(p, true);           // use BST insert
       return *this;
    }
    
@@ -119,7 +119,7 @@ public:
          V & at (const K& k);
    iterator find(const K & k)
    {
-      return iterator();
+      return bst.find(k);
    }
 
    //
@@ -282,7 +282,7 @@ template <typename K, typename V>
 V& map <K, V> :: operator [] (const K& key)
 {
     // create new pair with given key
-    pair<K, V> p(key, V());
+    pair<K, V> p(key);
     // make a bst iterator
     typename BST<Pairs>::iterator it = bst.find(p);
     // is it empty? no:
@@ -316,7 +316,7 @@ template <typename K, typename V>
 V& map <K, V> ::at(const K& key)
 {
     // create new pair with given key
-    pair<K, V> p(key, V());
+    pair<K, V> p(key);
     // make a bst iterator
     typename BST<Pairs>::iterator it = bst.find(p);
     // is it empty? no:
