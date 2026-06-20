@@ -127,19 +127,31 @@ public:
    //
    custom::pair<typename map::iterator, bool> insert(Pairs && rhs)
    {
-      return make_pair(iterator(), true);
+      auto bstResult = bst.insert(std::move(rhs), true);
+      
+      typename map::iterator mapIt(bstResult.first);
+      
+      return custom::pair<typename map::iterator, bool>(mapIt, bstResult.second);
    }
    custom::pair<typename map::iterator, bool> insert(const Pairs & rhs)
    {
-      return make_pair(iterator(), true);
+      auto bstResult = bst.insert(rhs, true);
+      
+      typename map::iterator mapIt(bstResult.first);
+      
+      return custom::pair<typename map::iterator, bool>(mapIt, bstResult.second);
    }
 
    template <class Iterator>
    void insert(Iterator first, Iterator last)
    {
+      for (auto it = first; it != last; it++)
+         bst.insert(*it, true);
    }
    void insert(const std::initializer_list <Pairs>& il)
    {
+      for (const auto & p : il)
+         bst.insert(*p, true);
    }
 
    //
@@ -147,6 +159,7 @@ public:
    //
    void clear() noexcept
    {
+      bst.clear();
    }
    size_t erase(const K& k);
    iterator erase(iterator it);
@@ -354,7 +367,16 @@ void swap(map <K, V>& lhs, map <K, V>& rhs)
 template <typename K, typename V>
 size_t map<K, V>::erase(const K& k)
 {
-   return size_t(99);
+   pair<K, V> target(k);
+   
+   typename BST<Pairs>::iterator it = bst.find(target);
+   
+   if (it == bst.end())
+      return 0;
+   
+   bst.erase(it);
+   
+   return 1;
 }
 
 /*****************************************************
@@ -364,7 +386,10 @@ size_t map<K, V>::erase(const K& k)
 template <typename K, typename V>
 typename map<K, V>::iterator map<K, V>::erase(map<K, V>::iterator first, map<K, V>::iterator last)
 {
-   return iterator();
+   while (first != last)
+      first = erase(first);
+   
+   return last;
 }
 
 /*****************************************************
@@ -374,7 +399,9 @@ typename map<K, V>::iterator map<K, V>::erase(map<K, V>::iterator first, map<K, 
 template <typename K, typename V>
 typename map<K, V>::iterator map<K, V>::erase(map<K, V>::iterator it)
 {
-   return iterator();
+   auto next = bst.erase(it.it);
+   
+   return iterator(next);
 }
 
 }; //  namespace custom
